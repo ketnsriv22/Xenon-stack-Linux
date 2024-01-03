@@ -1,0 +1,96 @@
+#!/bin/bash
+
+VERSION="v0.1.0"
+
+function print_help() {
+    echo "Usage: internsctl [command]"
+    echo "Commands:"
+    echo "  cpu getinfo        - Get CPU information"
+    echo "  memory getinfo     - Get memory information"
+    echo "  user create        - Create a new user"
+    echo "  user list          - List all regular users"
+    echo "  user list --sudo-only - List users with sudo privileges"
+    echo "  file getinfo       - Get file information"
+}
+
+function get_cpu_info() {
+    lscpu
+}
+
+function get_memory_info() {
+    free
+}
+
+function create_user() {
+    sudo useradd -m "$1"
+}
+
+function list_users() {
+    if [[ "$1" == "--sudo-only" ]]; then
+        grep '^sudo:.*$' /etc/group | cut -d: -f4
+    else
+        getent passwd | cut -d: -f1
+    fi
+}
+
+function file_getinfo() {
+    case "$1" in
+        --size|-s) 
+            stat -c%s "$2"
+            ;;
+        --permissions|-p) 
+            stat -c%A "$2"
+            ;;
+        --owner|-o) 
+            stat -c%U "$2"
+            ;;
+        --last-modified|-m) 
+            stat -c%y "$2"
+            ;;
+        *) 
+            echo "File: $1"
+            echo "Access: $(stat -c%A "$1")"
+            echo "Size(B): $(stat -c%s "$1")"
+            echo "Owner: $(stat -c%U "$1")"
+            echo "Modify: $(stat -c%y "$1")"
+            ;;
+    esac
+}
+
+case "$1" in
+    --help)
+        print_help
+        ;;
+    --version)
+        echo "internsctl version $VERSION"
+        ;;
+    cpu)
+        if [[ "$2" == "getinfo" ]]; then
+            get_cpu_info
+        fi
+        ;;
+    memory)
+        if [[ "$2" == "getinfo" ]]; then
+            get_memory_info
+        fi
+        ;;
+    user)
+        case "$2" in
+            create)
+                create_user "$3"
+                ;;
+            list)
+                list_users "$3"
+                ;;
+        esac
+        ;;
+    file)
+        if [[ "$2" == "getinfo" ]]; then
+            file_getinfo "$3" "$4"
+        fi
+        ;;
+    *)
+        echo "Unknown command: $1"
+        print_help
+        ;;
+esac
